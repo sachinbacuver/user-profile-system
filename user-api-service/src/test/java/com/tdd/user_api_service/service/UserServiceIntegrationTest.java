@@ -1,0 +1,117 @@
+package com.tdd.user_api_service.service;
+
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+import java.time.Duration;
+import java.util.Map;
+
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.test.EmbeddedKafkaBroker;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.kafka.test.utils.KafkaTestUtils;
+import org.springframework.test.context.ActiveProfiles;
+
+import com.tdd.user_api_service.dto.CreateUserRequest;
+import com.tdd.user_api_service.dto.UserResponse;
+import com.tdd.user_api_service.model.User;
+import com.tdd.user_api_service.repository.UserRepository;
+
+/**
+ * RED TDD Phase:
+ * This test is designed to FAIL.
+ * It loads the real UserService and listens for a Kafka message.
+ * The UserService (currently) does NOT send a message,
+ * so this test will time out.
+ */
+@SpringBootTest
+@EmbeddedKafka(
+    partitions = 1,
+    brokerProperties = { "listeners=PLAINTEXT://kafka:9092", "port=9092" },
+    topics = { "user-created-topic" } // Topic name defined in test
+)
+@ActiveProfiles("test") 
+class UserServiceIntegrationTest {
+
+    @Autowired
+    private EmbeddedKafkaBroker embeddedKafkaBroker;
+
+    // We autowire the *real* UserService
+    @Autowired
+    private UserService userService;
+
+    // We are not testing the DB, so we mock the repository
+    @MockBean
+    private UserRepository userRepository;
+
+    private Consumer<String, UserResponse> consumer;
+    private final String TOPIC_NAME = "user-created-topic";
+
+    @BeforeEach
+    void setUp() {
+        Map<String, Object> consumerProps = KafkaTestUtils.consumerProps("test-consumer-group", "true", embeddedKafkaBroker);
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        
+        org.springframework.kafka.support.serializer.JsonDeserializer<UserResponse> valueDeserializer = 
+                new org.springframework.kafka.support.serializer.JsonDeserializer<>(UserResponse.class, false);
+        
+        valueDeserializer.addTrustedPackages("com.tdd.user_api_service.dto");
+        
+        ConsumerFactory<String, UserResponse> cf = new DefaultKafkaConsumerFactory<>(
+        		consumerProps,
+                new org.apache.kafka.common.serialization.StringDeserializer(),
+                valueDeserializer
+        );
+
+        consumer = cf.createConsumer();
+        consumer.subscribe(java.util.Collections.singletonList(TOPIC_NAME));
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (consumer != null) {
+            consumer.close();
+        }
+    }
+
+    @Test
+    void whenCreateUser_shouldPublishUserCreatedEvent() {
+        // --- Arrange ---
+        CreateUserRequest request = new CreateUserRequest(
+                "kafka.test@example.com", "Kafka", "Test", "kfk123"
+        );
+        User savedUser = new User(
+                "mock-id-kafka-123", "kafka.test@example.com", "Kafka", "Test", "kfk123"
+        );
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        // --- Act ---
+        // This calls the real UserServiceImpl.createUser()
+        // This method DOES NOT send a Kafka message yet.
+        userService.createUser(request);
+
+        // --- Assert ---
+        // This will try to get a record for 10 seconds and then FAIL
+        // by throwing an IllegalStateException (timeout).
+        // This is our "RED" test!
+        ConsumerRecord<String, UserResponse> record = KafkaTestUtils.getSingleRecord(consumer, TOPIC_NAME, Duration.ofMillis(10000));
+
+        // This code will not be reached in the "Red" phase
+        assertThat(record).isNotNull();
+        assertThat(record.value().email()).isEqualTo("kafka.test@example.com");
+        assertThat(record.value().firstName()).isEqualTo("Kafka");
+        assertThat(record.value().lastName()).isEqualTo("Test");
+    }
+}

@@ -1,0 +1,9 @@
+aws:
+  dynamodb:
+    endpoint: http://localhost:8000
+cloud:
+  aws:
+    region:
+      static: ap-south-1
+    stack:
+      auto: false
