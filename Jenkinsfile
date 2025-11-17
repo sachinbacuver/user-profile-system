@@ -1,5 +1,10 @@
 pipeline {
     agent any
+	
+	environment {
+    TESTCONTAINERS_RYUK_DISABLED = 'true'
+	}
+
 
 
 
