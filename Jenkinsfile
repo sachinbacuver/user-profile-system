@@ -19,13 +19,13 @@ pipeline {
 						"Build & Test user-api-service": {
 							sh """
 								cd user-api-service
-								mvn -f user-api-service/pom.xml clean install
+								mvn -f pom.xml clean install
 							"""
 						},
 						"Build & Test profile-api-service": {
 							sh """
 								cd profile-api-service
-								mvn -f profile-api-service/pom.xml clean install
+								mvn -f pom.xml clean install
 							"""
 						}
 					)
