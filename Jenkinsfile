@@ -1,13 +1,7 @@
 pipeline {
     agent any
 
-    options {
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-        timeout(time: 60, unit: 'MINUTES')
-        timestamps()
-    }
 
-    // triggers { }
 
     stages {
         stage('Checkout') {
