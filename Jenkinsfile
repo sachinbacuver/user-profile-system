@@ -12,26 +12,27 @@ pipeline {
         }
 
         stage('Build & Test (parallel)') {
-            steps {
-                script {
-                    def branches = [:]
+			steps {
+				script {
+					parallel(
+						failFast: true,
+						"Build & Test user-api-service": {
+							sh """
+								cd user-api-service
+								mvn -B -DskipTests clean package
+							"""
+						},
+						"Build & Test profile-api-service": {
+							sh """
+								cd profile-api-service
+								mvn -B -DskipTests clean package
+							"""
+						}
+					)
+				}
+			}
+		}
 
-                    branches['Build & Test user-api'] = {
-                        dir('user-api-service') {
-                            sh 'mvn -B clean install'
-                        }
-                    }
-
-                    branches['Build & Test profile-api'] = {
-                        dir('profile-api-service') {
-                            sh 'mvn -B clean install'
-                        }
-                    }
-
-                    parallel branches, failFast: true
-                }
-            }
-        }
     }
 
     post {
