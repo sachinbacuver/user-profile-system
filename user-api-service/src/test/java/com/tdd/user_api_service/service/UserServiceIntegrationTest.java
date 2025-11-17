@@ -39,7 +39,8 @@ import com.tdd.user_api_service.repository.UserRepository;
 @SpringBootTest
 @EmbeddedKafka(
     partitions = 1,
-    brokerProperties = { "listeners=PLAINTEXT://kafka:9092", "port=9092" },
+    brokerProperties = { "listeners=PLAINTEXT://localhost:9092", "port=9092" },
+//    brokerProperties = { "listeners=PLAINTEXT://kafka:9092", "port=9092" },
     topics = { "user-created-topic" } // Topic name defined in test
 )
 @ActiveProfiles("test") 

@@ -29,7 +29,9 @@ public class UserRepositoryIntegrationTest {
      * The "mongo:7.0" image will be pulled from Docker Hub.
      */
     @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:7.0");
+//    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:7.0");
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:7.0").withReuse(true);
+
 
     /**
      * This method dynamically overrides the Spring Boot 'spring.data.mongodb.uri'
