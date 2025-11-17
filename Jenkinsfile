@@ -25,7 +25,7 @@ pipeline {
 						"Build & Test profile-api-service": {
 							sh """
 								cd profile-api-service
-								mvn -f pom.xml clean install
+								mvn -f pom.xml clean install -Dtestcontainers.resourceReaper=false
 							"""
 						}
 					)
