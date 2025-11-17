@@ -19,13 +19,13 @@ pipeline {
 						"Build & Test user-api-service": {
 							sh """
 								cd user-api-service
-								mvnw -B -DskipTests clean package
+								mvn -B -DskipTests clean package
 							"""
 						},
 						"Build & Test profile-api-service": {
 							sh """
 								cd profile-api-service
-								mvnw -B -DskipTests clean package
+								mvn -B -DskipTests clean package
 							"""
 						}
 					)
