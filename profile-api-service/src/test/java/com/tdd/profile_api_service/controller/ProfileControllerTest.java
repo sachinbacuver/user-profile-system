@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tdd.profile_api_service.dto.CreateProfileRequest;
 import com.tdd.profile_api_service.model.UserProfile;
-import com.tdd.profile_api_service.service.ProfileService;
+import com.tdd.profile_api_service.service.ProfileServiceImpl;
 
 /**
  * TDD Test Class for ProfileController
@@ -36,7 +36,7 @@ class ProfileControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private ProfileService profileService;
+    private ProfileServiceImpl profileService;
 
     /**
      * RED Phase: This test will FAIL because:

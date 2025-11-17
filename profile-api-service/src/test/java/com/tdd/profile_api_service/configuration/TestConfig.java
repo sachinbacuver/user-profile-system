@@ -2,6 +2,8 @@ package com.tdd.profile_api_service.configuration;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -13,6 +15,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 @TestConfiguration(proxyBeanMethods = false)
+@Profile("test")
 public class TestConfig {
 	
 //	private static final DockerImageName LOCALSTACK_IMAGE =
@@ -28,6 +31,7 @@ public class TestConfig {
     }
 
     @Bean
+    @Primary
     public DynamoDbClient dynamoDbClient(LocalStackContainer localstack) {
         return DynamoDbClient.builder()
                 .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.DYNAMODB))

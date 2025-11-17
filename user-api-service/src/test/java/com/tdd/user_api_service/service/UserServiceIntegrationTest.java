@@ -47,6 +47,7 @@ import com.tdd.user_api_service.repository.UserRepository;
 class UserServiceIntegrationTest {
 
     @Autowired
+//	@MockBean
     private EmbeddedKafkaBroker embeddedKafkaBroker;
 
     // We autowire the *real* UserService
