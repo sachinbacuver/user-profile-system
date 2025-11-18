@@ -2,7 +2,7 @@ pipeline {
     agent any
 	
 	environment {
-    TESTCONTAINERS_RYUK_DISABLED = 'true'
+
 	DOCKER_HOST = 'unix:///var/run/docker.sock'
     TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
 	}
