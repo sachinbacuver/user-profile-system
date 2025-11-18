@@ -38,7 +38,7 @@ class ProfileRepositoryIntegrationTest {
 	static LocalStackContainer localstack = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.0"))
 	        .withServices(LocalStackContainer.Service.DYNAMODB);
 	
-	@Autowired
+//	@Autowired
 //	private static LocalStackContainer localstack;
 
 

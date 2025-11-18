@@ -21,14 +21,14 @@ public class TestConfig {
 //	private static final DockerImageName LOCALSTACK_IMAGE =
 //            DockerImageName.parse("localstack/localstack:3.0");
 
-//	@Bean
-//    public LocalStackContainer localStackContainer() {
-//        LocalStackContainer localStack =
-//                new LocalStackContainer(DockerImageName.parse("localstack/localstack:latest"))
-//                        .withServices(LocalStackContainer.Service.DYNAMODB);
-//        localStack.start();
-//        return localStack;
-//    }
+	@Bean
+    public LocalStackContainer localStackContainer() {
+        LocalStackContainer localStack =
+                new LocalStackContainer(DockerImageName.parse("localstack/localstack:latest"))
+                        .withServices(LocalStackContainer.Service.DYNAMODB);
+        localStack.start();
+        return localStack;
+    }
 
     @Bean
     @Primary
