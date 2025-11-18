@@ -48,6 +48,7 @@ class ProfileRepositoryIntegrationTest {
         registry.add("spring.cloud.aws.credentials.access-key", () -> "test");
         registry.add("spring.cloud.aws.credentials.secret-key", () -> "test");
         registry.add("spring.cloud.aws.dynamodb.endpoint", () -> localstack.getEndpointOverride(LocalStackContainer.Service.DYNAMODB).toString());
+        registry.add("aws.endpoint",() -> "http://localhost:" + localstack.getEndpointOverride(LocalStackContainer.Service.DYNAMODB).getPort());
     }
 
     @Autowired
