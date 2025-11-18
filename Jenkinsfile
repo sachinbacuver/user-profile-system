@@ -3,6 +3,8 @@ pipeline {
 	
 	environment {
     TESTCONTAINERS_RYUK_DISABLED = 'true'
+	DOCKER_HOST = 'unix:///var/run/docker.sock'
+    TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
 	}
 
 
@@ -12,7 +14,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                echo "Checked out ${env.GIT_COMMIT ?: 'unknown commit'}"
+                echo "Checked out ${env.GIT_COMMIT ?: 'unknown commits'}"
             }
         }
 
@@ -30,7 +32,7 @@ pipeline {
 						"Build & Test profile-api-service": {
 							sh """
 								cd profile-api-service
-								mvn -f pom.xml clean install -Dtestcontainers.resourceReaper=false
+								mvn -f pom.xml clean install -Dtestcontainers.reuse.enable=false -Dtestcontainers.checks.disable=true -Dtestcontainers.host.override=host.docker.internal
 							"""
 						}
 					)
