@@ -32,7 +32,7 @@ pipeline {
 						"Build & Test profile-api-service": {
 							sh """
 								cd profile-api-service
-								mvn -f pom.xml clean install -Dtestcontainers.reuse.enable=false -Dtestcontainers.checks.disable=true -Dtestcontainers.host.override=host.docker.internal
+								mvn -f pom.xml clean install
 							"""
 						}
 					)
