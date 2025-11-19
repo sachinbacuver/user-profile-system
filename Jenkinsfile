@@ -2,7 +2,6 @@ pipeline {
     agent any
 	
 	environment {
-
 	DOCKER_HOST = 'unix:///var/run/docker.sock'
     TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
 	}
