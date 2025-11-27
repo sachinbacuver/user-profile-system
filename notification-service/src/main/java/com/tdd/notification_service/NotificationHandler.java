@@ -1,5 +1,13 @@
 package com.tdd.notification_service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Base64;
+
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -7,16 +15,20 @@ import com.amazonaws.services.lambda.runtime.events.KafkaEvent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-
 public class NotificationHandler implements RequestHandler<KafkaEvent, String> {
 
-    private static final String PROFILE_API_URL = "http://localhost:8080/profiles"; // or your deployed endpoint
+//    private static final String PROFILE_API_URL = "http://localhost:8081/profiles"; 
     private final ObjectMapper mapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final String profileApiUrl;
+    
+    public NotificationHandler() {
+        this.profileApiUrl = "http://profile-api-discovery.profile-api-service:8081/profiles";
+    }
+    
+    public NotificationHandler(String profileApiUrl) {
+        this.profileApiUrl = profileApiUrl;
+    }
 
     @Override
     public String handleRequest(KafkaEvent event, Context context) {
@@ -26,16 +38,45 @@ public class NotificationHandler implements RequestHandler<KafkaEvent, String> {
             for (var records : event.getRecords().values()) {
                 for (KafkaEvent.KafkaEventRecord record : records) {
                     logger.log("Received Kafka message: " + record.getValue());
+                    
+                    
+                    // 2️⃣ Decode Base64
+                    byte[] decodedBytes = Base64.getDecoder().decode(record.getValue());
+                    String json = new String(decodedBytes, StandardCharsets.UTF_8);
 
-                    JsonNode jsonNode = mapper.readTree(record.getValue());
-                    String userId = jsonNode.get("id").asText(); // Extract only userId
+                    logger.log("Decoded JSON string: " + json);
+
+                    // 3️⃣ Parse JSON
+                    JsonNode jsonNode = mapper.readTree(json);
+                    String userId = jsonNode.get("id").asText();
+
                     logger.log("Extracted userId: " + userId);
 
-                    // Prepare JSON body for Profile API
-                    String requestBody = "{\"userId\": \"" + userId + "\"}";
+                    // 4️⃣ Build Profile API request JSON
+                    JsonNode profileRequest = mapper.createObjectNode()
+                            .put("userId", userId)
+                            .put("bio", "")
+                            .put("profilePhoto", "")
+                            .put("gender", "");
+
+                    String requestBody = mapper.writeValueAsString(profileRequest);
+
+//                    JsonNode jsonNode = mapper.readTree(record.getValue());
+//                    String userId = jsonNode.get("id").asText();
+//                    logger.log("Extracted userId: " + userId);
+
+//                    // Prepare JSON body for Profile API
+//                    String requestBody = "{"
+//                            + "\"userId\": \"" + userId + "\","
+//                            + "\"bio\": \"\","
+//                            + "\"profilePhoto\": \"\","
+//                            + "\"gender\": \"\""
+//                            + "}";
+
 
                     HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create(PROFILE_API_URL))
+                            .uri(URI.create(profileApiUrl))
+                            .timeout(Duration.ofSeconds(3))  
                             .header("Content-Type", "application/json")
                             .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                             .build();
@@ -51,9 +92,10 @@ public class NotificationHandler implements RequestHandler<KafkaEvent, String> {
                 }
             }
         } catch (Exception e) {
+        	logger.log("HTTP ERROR: " + e.toString());
             logger.log("Error processing event: " + e.getMessage());
         }
-
+        
         return "Processed successfully";
     }
 }
