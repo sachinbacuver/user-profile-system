@@ -1,21 +1,31 @@
 pipeline {
     agent any
+	
+	triggers {
+        githubPush()
+    }
 
     environment {
         DOCKER_HOST = 'unix:///var/run/docker.sock'
         TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
-        AWS_REGION = credentials('AWS_REGION')   // stored in Jenkins
+        AWS_REGION = credentials('AWS_REGION')
     }
 
     stages {
 
+        /*******************************
+         * CHECKOUT
+         *******************************/
         stage('Checkout') {
             steps {
                 checkout scm
-                echo "Checked out ${env.GIT_COMMIT ?: 'unknown commits'}"
+                echo "Checked out ${env.GIT_COMMIT ?: 'unknown commit'}"
             }
         }
 
+        /*******************************
+         * BUILD AND TEST
+         *******************************/
         stage('Build & Test (parallel)') {
             steps {
                 script {
@@ -39,7 +49,7 @@ pipeline {
         }
 
         /*******************************
-         *   NEW: Build Docker Images  *
+         * BUILD DOCKER IMAGES
          *******************************/
         stage('Build Images (parallel)') {
             steps {
@@ -62,15 +72,15 @@ pipeline {
             }
         }
 
-        /*****************************
-         *   NEW: Push to AWS ECR    *
-         *****************************/
+        /*******************************
+         * PUSH TO ECR
+         *******************************/
         stage('Push to ECR') {
             steps {
                 script {
                     withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
 
-                        def userApiRepo = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/user-api-repo"
+                        def userApiRepo    = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/user-api-repo"
                         def profileApiRepo = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/profile-api-repo"
 
                         // Login to ECR
@@ -79,52 +89,90 @@ pipeline {
                             | docker login --username AWS --password-stdin 111851026561.dkr.ecr.${env.AWS_REGION}.amazonaws.com
                         """
 
-                        // Tag the images
+                        // Tag images
                         sh """
                             docker tag user-api-repo ${userApiRepo}:latest
                             docker tag profile-api-repo ${profileApiRepo}:latest
                         """
 
-                        // Push to ECR
+                        // Push images
                         sh """
                             docker push ${userApiRepo}:latest
                             docker push ${profileApiRepo}:latest
                         """
+
                     }
                 }
             }
         }
 
         /*******************************
-         *       NEW: Deploy           *
+         * CREATE NEW TASK REVISION + DEPLOY
          *******************************/
         stage('Deploy') {
             steps {
                 script {
                     withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
 
-                        echo "Updating ECS Service..."
-						echo "Updating user-api-service..."
+                        def userApiImage    = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/user-api-repo:latest"
+                        def profileApiImage = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/profile-api-repo:latest"
+
+                        /****************************************
+                         * 1️⃣ USER API – New Task Definition Revision
+                         ****************************************/
+                        echo "Registering NEW TASK DEFINITION REVISION for user-api..."
+
+                        sh """
+                            sed "s|IMAGE_URI|${userApiImage}|g" user-api-service/taskdef.json \
+                                > user-api-service/taskdef_rendered.json
+
+                            aws ecs register-task-definition \
+                                --cli-input-json file://user-api-service/taskdef_rendered.json
+                        """
+
+                        /****************************************
+                         * 2️⃣ PROFILE API – New Task Definition Revision
+                         ****************************************/
+                        echo "Registering NEW TASK DEFINITION REVISION for profile-api..."
+
+                        sh """
+                            sed "s|IMAGE_URI|${profileApiImage}|g" profile-api-task-service-sd8td7rr/taskdef.json \
+                                > profile-api-task-service-sd8td7rr/taskdef_rendered.json
+
+                            aws ecs register-task-definition \
+                                --cli-input-json file://profile-api-task-service-sd8td7rr/taskdef_rendered.json
+                        """
+
+                        /****************************************
+                         * 3️⃣ DEPLOY SERVICES
+                         * ECS will automatically use the LATEST revision
+                         ****************************************/
+
+                        echo "Deploying user-api-service with latest revision..."
                         sh """
                             aws ecs update-service \
                                 --cluster user-profile-cluster \
                                 --service user-api-service \
                                 --force-new-deployment
                         """
-						
-						echo "Updating user-api-service..."
-						sh """
+
+                        echo "Deploying profile-api-service with latest revision..."
+                        sh """
                             aws ecs update-service \
                                 --cluster user-profile-cluster \
                                 --service profile-api-task-service-sd8td7rr \
                                 --force-new-deployment
                         """
+
                     }
                 }
             }
         }
     }
 
+    /*******************************
+     * POST ACTIONS
+     *******************************/
     post {
         always {
             junit allowEmptyResults: true, testResults: 'user-api-service/**/target/surefire-reports/*.xml,profile-api-service/**/target/surefire-reports/*.xml'
