@@ -36,7 +36,7 @@ pipeline {
                         echo "Uploading notification-service JAR to S3..."
                         sh """
                             aws s3 cp notification-service/target/*.jar \
-                                s3://${S3_BUCKET}/notification-service-1.0.0.jar
+                                s3://${S3_BUCKET}/notification-service-latest.jar
                         """
                     }
                 }
@@ -52,7 +52,7 @@ pipeline {
                             aws lambda update-function-code \
                                 --function-name ${LAMBDA_NAME} \
                                 --s3-bucket ${S3_BUCKET} \
-                                --s3-key notification-service-1.0.0.jar
+                                --s3-key notification-service-latest.jar
                         """
                     }
                 }
