@@ -1,7 +1,3 @@
-sha256:35e9f0e2e67966364e8ed3d6c56b98379debab8278f3b8bf0f0e77e344ff92a1
-
-
-
 pipeline {
     agent any
 	
