@@ -73,7 +73,6 @@ public class NotificationHandler implements RequestHandler<KafkaEvent, String> {
 //                            + "\"gender\": \"\""
 //                            + "}";
 
-
                     HttpRequest request = HttpRequest.newBuilder()
                             .uri(URI.create(profileApiUrl))
                             .timeout(Duration.ofSeconds(3))  

@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -17,8 +18,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import com.tdd.profile_api_service.configuration.TestConfig;
+import com.tdd.profile_api_service.configuration.DynamoDbConfigAws;
 import com.tdd.profile_api_service.model.UserProfile;
+import com.tdd.profile_api_service.testconfiguration.TestConfig;
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -31,6 +33,9 @@ import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 //@SpringBootTest@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(TestConfig.class)
 @ActiveProfiles("test")
+//@EnableAutoConfiguration(exclude = {
+//	    DynamoDbConfigAws.class  // Exclude production config
+//	})
 class ProfileRepositoryIntegrationTest {
 
 //    @SuppressWarnings("resource")
@@ -63,8 +68,8 @@ class ProfileRepositoryIntegrationTest {
     
     private DynamoDbTable<UserProfile> table;
     
-    @Autowired
-    private DynamoDbClient dynamoDbClient;
+//    @Autowired
+//    private DynamoDbClient dynamoDbClient;
     
     
     private void waitUntilActive(DynamoDbTable<UserProfile> table) throws InterruptedException {

@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.7</version> 
+        <version>3.5.8</version> 
         <relativePath/>
     </parent>
 
@@ -22,8 +22,8 @@
         <java.version>17</java.version>
     	<maven.compiler.source>17</maven.compiler.source>
     	<maven.compiler.target>17</maven.compiler.target>
-        <spring.boot.version>3.5.7</spring.boot.version>
-        <testcontainers.version>1.19.8</testcontainers.version>
+        <spring.boot.version>3.5.8</spring.boot.version>
+        <testcontainers.version>1.21.0</testcontainers.version>
     </properties>
     
 

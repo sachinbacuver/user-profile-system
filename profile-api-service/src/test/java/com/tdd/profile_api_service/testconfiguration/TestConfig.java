@@ -1,4 +1,4 @@
-package com.tdd.profile_api_service.configuration;
+package com.tdd.profile_api_service.testconfiguration;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

@@ -9,7 +9,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 @Configuration
-@Profile("!local")
+@Profile("aws")
 public class DynamoDbConfigAws {
 
     @Bean
