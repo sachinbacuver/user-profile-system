@@ -52,7 +52,7 @@ pipeline {
                             aws lambda update-function-code \
                                 --function-name ${LAMBDA_NAME} \
                                 --s3-bucket ${S3_BUCKET} \
-                                --s3-key notification-service-latest.jar
+                                --s3-key notification-service-1.0.0.jar
                         """
                     }
                 }
