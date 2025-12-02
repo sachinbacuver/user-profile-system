@@ -5,8 +5,8 @@ pipeline {
         DOCKER_HOST = 'unix:///var/run/docker.sock'
         TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
         AWS_REGION = credentials('AWS_REGION')
-        S3_BUCKET = "your-notification-bucket"                // <-- CHANGE THIS
-        LAMBDA_NAME = "notification-lambda-function"          // <-- CHANGE THIS
+        S3_BUCKET = "notification-service-lambda-bucket"
+        LAMBDA_NAME = "notification-lambda" 
     }
 
     stages {
