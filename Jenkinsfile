@@ -160,15 +160,13 @@ pipeline {
                         def profileApiImage = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/profile-api-repo:latest"
 
                         echo "Registering NEW TASK REVISION for user-api..."
-						sh """
-							  echo "=== WORKSPACE CONTENTS ==="
-							  pwd
-							  ls -R .
-								"""
-
                         sh """
                             sed "s|IMAGE_URI|${userApiImage}|g" user-api-service/taskdef.json \
                                 > user-api-service/taskdef_rendered.json
+								
+								echo "===== Rendered USER API TASKDEF ====="
+								cat user-api-service/taskdef_rendered.json
+
 
                             aws ecs register-task-definition \
                                 --cli-input-json file://user-api-service/taskdef_rendered.json
