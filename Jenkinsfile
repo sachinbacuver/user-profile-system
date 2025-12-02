@@ -5,15 +5,12 @@ pipeline {
         DOCKER_HOST = 'unix:///var/run/docker.sock'
         TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
         AWS_REGION = credentials('AWS_REGION')
-        S3_BUCKET = "notification-service-lambda-bucket"                // <-- CHANGE THIS
-        LAMBDA_NAME = "notification-lambda"          // <-- CHANGE THIS
+        S3_BUCKET = "notification-service-lambda-bucket"
+        LAMBDA_NAME = "notification-lambda"
     }
 
     stages {
 
-        /*******************************
-         * CHECKOUT
-         *******************************/
         stage('Checkout') {
             steps {
                 checkout scm
@@ -21,76 +18,54 @@ pipeline {
             }
         }
 
-        /*******************************
-         * BUILD & TEST ALL SERVICES
-         *******************************/
-        stage('Build & Test (parallel)') {
+        stage('Build & Test notification-service') {
             steps {
                 script {
-                    parallel(
-                        failFast: true,
-
-                        "Build & Test notification-service": {
-                            sh """
-                                cd notification-service
-                                mvn -f pom.xml clean install
-                            """
-                        }
-                    )
+                    sh """
+                        cd notification-service
+                        mvn -f pom.xml clean install
+                    """
                 }
             }
         }
 
-
-
-        /*******************************
-         * NEW: Upload Notification JAR to S3
-         *******************************/
         stage('Upload Notification JAR to S3') {
             steps {
                 script {
                     withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
-
                         echo "Uploading notification-service JAR to S3..."
-
                         sh """
                             aws s3 cp notification-service/target/*.jar \
-                                s3://${S3_BUCKET}/notification-service-latest.jar
+                                s3://${S3_BUCKET}/notification-service-1.0.0.jar
                         """
-
                     }
                 }
             }
         }
 
-        /*******************************
-         * NEW: Update Lambda Code
-         *******************************/
         stage('Update Lambda') {
             steps {
                 script {
                     withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
-
                         echo "Updating Lambda Function ${LAMBDA_NAME}..."
-
                         sh """
                             aws lambda update-function-code \
                                 --function-name ${LAMBDA_NAME} \
                                 --s3-bucket ${S3_BUCKET} \
-                                --s3-key notification-service-latest.jar
+                                --s3-key notification-service-1.0.0.jar
                         """
                     }
                 }
             }
         }
-	}
+    }
 
     post {
         always {
             junit allowEmptyResults: true, 
-                  testResults: 'user-api-service/**/target/surefire-reports/*.xml,profile-api-service/**/target/surefire-reports/*.xml'
+                  testResults: 'notification-service/**/target/surefire-reports/*.xml'
 
-            archiveArtifacts artifacts: '*/**/target/*.jar', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'notification-service/**/target/*.jar', allowEmptyArchive: true
             cleanWs()
         }
 
