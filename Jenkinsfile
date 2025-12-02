@@ -1,12 +1,18 @@
+sha256:35e9f0e2e67966364e8ed3d6c56b98379debab8278f3b8bf0f0e77e344ff92a1
+
+
+
 pipeline {
     agent any
+	
+	triggers {
+        githubPush()
+    }
 
     environment {
         DOCKER_HOST = 'unix:///var/run/docker.sock'
         TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
         AWS_REGION = credentials('AWS_REGION')
-        S3_BUCKET = "notification-service-lambda-bucket"
-        LAMBDA_NAME = "notification-lambda" 
     }
 
     stages {
@@ -22,31 +28,22 @@ pipeline {
         }
 
         /*******************************
-         * BUILD & TEST ALL SERVICES
+         * BUILD AND TEST
          *******************************/
         stage('Build & Test (parallel)') {
             steps {
                 script {
                     parallel(
                         failFast: true,
-
                         "Build & Test user-api-service": {
                             sh """
                                 cd user-api-service
                                 mvn -f pom.xml clean install
                             """
                         },
-
                         "Build & Test profile-api-service": {
                             sh """
                                 cd profile-api-service
-                                mvn -f pom.xml clean install
-                            """
-                        },
-
-                        "Build & Test notification-service": {
-                            sh """
-                                cd notification-service
                                 mvn -f pom.xml clean install
                             """
                         }
@@ -107,22 +104,6 @@ pipeline {
                             docker push ${userApiRepo}:latest
                             docker push ${profileApiRepo}:latest
                         """
-                    }
-                }
-            }
-        }
-
-        /*******************************
-         * NEW: Upload Notification JAR to S3
-         *******************************/
-        stage('Upload Notification JAR to S3') {
-            steps {
-                script {
-                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
-                        echo "Uploading notification-service JAR to S3..."
-                        sh """
-								aws s3 cp notification-service/target/notification-service-1.0.0.jar	s3://${S3_BUCKET}/notification-service-1.0.0.jar
-							"""
 
                     }
                 }
@@ -130,28 +111,9 @@ pipeline {
         }
 
         /*******************************
-         * NEW: Update Lambda Code
+         * CREATE NEW TASK REVISION + DEPLOY
          *******************************/
-        stage('Update Lambda') {
-            steps {
-                script {
-                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
-                        echo "Updating Lambda Function ${LAMBDA_NAME}..."
-                        sh """
-                            aws lambda update-function-code \
-                                --function-name ${LAMBDA_NAME} \
-                                --s3-bucket ${S3_BUCKET} \
-                                --s3-key notification-service-1.0.0.jar
-                        """
-                    }
-                }
-            }
-        }
-
-        /*******************************
-         * CREATE NEW TASK REVISION + DEPLOY ECS
-         *******************************/
-        stage('Deploy ECS') {
+        stage('Deploy') {
             steps {
                 script {
                     withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
@@ -159,29 +121,38 @@ pipeline {
                         def userApiImage    = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/user-api-repo:latest"
                         def profileApiImage = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/profile-api-repo:latest"
 
-                        echo "Registering NEW TASK REVISION for user-api..."
+                        /****************************************
+                         * 1️⃣ USER API – New Task Definition Revision
+                         ****************************************/
+                        echo "Registering NEW TASK DEFINITION REVISION for user-api..."
+
                         sh """
                             sed "s|IMAGE_URI|${userApiImage}|g" user-api-service/taskdef.json \
                                 > user-api-service/taskdef_rendered.json
-								
-								echo "===== Rendered USER API TASKDEF ====="
-								cat user-api-service/taskdef_rendered.json
-
 
                             aws ecs register-task-definition \
                                 --cli-input-json file://user-api-service/taskdef_rendered.json
                         """
 
-                        echo "Registering NEW TASK REVISION for profile-api..."
+                        /****************************************
+                         * 2️⃣ PROFILE API – New Task Definition Revision
+                         ****************************************/
+                        echo "Registering NEW TASK DEFINITION REVISION for profile-api..."
+
                         sh """
-                            sed "s|IMAGE_URI|${profileApiImage}|g" profile-api-task-service-sd8td7rr/taskdef.json \
+                            sed "s|IMAGE_URI|${profileApiImage}|g" profile-api-task-service/taskdef.json \
                                 > profile-api-task-service-sd8td7rr/taskdef_rendered.json
 
                             aws ecs register-task-definition \
-                                --cli-input-json file://profile-api-task-service-sd8td7rr/taskdef_rendered.json
+                                --cli-input-json file://profile-api-task-service/taskdef_rendered.json
                         """
 
-                        echo "Deploying user-api-service..."
+                        /****************************************
+                         * 3️⃣ DEPLOY SERVICES
+                         * ECS will automatically use the LATEST revision
+                         ****************************************/
+
+                        echo "Deploying user-api-service with latest revision..."
                         sh """
                             aws ecs update-service \
                                 --cluster user-profile-cluster \
@@ -189,25 +160,27 @@ pipeline {
                                 --force-new-deployment
                         """
 
-                        echo "Deploying profile-api-service..."
+                        echo "Deploying profile-api-service with latest revision..."
                         sh """
                             aws ecs update-service \
                                 --cluster user-profile-cluster \
                                 --service profile-api-task-service-sd8td7rr \
                                 --force-new-deployment
                         """
+
                     }
                 }
             }
         }
     }
 
+    /*******************************
+     * POST ACTIONS
+     *******************************/
     post {
         always {
-            junit allowEmptyResults: true, 
-                  testResults: 'user-api-service/**/target/surefire-reports/*.xml,profile-api-service/**/target/surefire-reports/*.xml'
-
-            archiveArtifacts artifacts: '*/**/target/*.jar', allowEmptyArchive: true
+            junit allowEmptyResults: true, testResults: 'user-api-service/**/target/surefire-reports/*.xml,profile-api-service/**/target/surefire-reports/*.xml'
+            archiveArtifacts artifacts: 'user-api-service/**/target/*.jar,profile-api-service/**/target/*.jar', allowEmptyArchive: true
             cleanWs()
         }
 
