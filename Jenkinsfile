@@ -126,9 +126,13 @@ pipeline {
                             sed "s|IMAGE_URI|${userApiImage}|g" user-api-service/taskdef.json \
                                 > user-api-service/taskdef_rendered.json
 								
+							echo "=== Printing taskdef.json ==="
+							cat user-api-service/taskdef.json || true
+
+								
 								
 							echo "===== Rendered USER API TASKDEF ====="
-							cat user-api-service/taskdef_rendered.json
+							cat user-api-service/taskdef_rendered.json || true
 
                             aws ecs register-task-definition \
                                 --cli-input-json file://user-api-service/taskdef_rendered.json
