@@ -1,59 +1,104 @@
 pipeline {
     agent any
-	
-	environment {
-	DOCKER_HOST = 'unix:///var/run/docker.sock'
-    TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
-	}
 
-
-
+    environment {
+        DOCKER_HOST = 'unix:///var/run/docker.sock'
+        TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
+        AWS_REGION = credentials('AWS_REGION')
+        S3_BUCKET = "notification-service-lambda-bucket"                // <-- CHANGE THIS
+        LAMBDA_NAME = "notification-lambda"          // <-- CHANGE THIS
+    }
 
     stages {
+
+        /*******************************
+         * CHECKOUT
+         *******************************/
         stage('Checkout') {
             steps {
                 checkout scm
-                echo "Checked out ${env.GIT_COMMIT ?: 'unknown commits'}"
+                echo "Checked out ${env.GIT_COMMIT ?: 'unknown commit'}"
             }
         }
 
+        /*******************************
+         * BUILD & TEST ALL SERVICES
+         *******************************/
         stage('Build & Test (parallel)') {
-			steps {
-				script {
-					parallel(
-						failFast: true,
-						"Build & Test user-api-service": {
-							sh """
-								cd user-api-service
-								mvn -f pom.xml clean install
-							"""
-						},
-						"Build & Test profile-api-service": {
-							sh """
-								cd profile-api-service
-								mvn -f pom.xml clean install
-							"""
-						}
-					)
-				}
-			}
-		}
+            steps {
+                script {
+                    parallel(
+                        failFast: true,
 
-    }
+                        "Build & Test notification-service": {
+                            sh """
+                                cd notification-service
+                                mvn -f pom.xml clean install
+                            """
+                        }
+                    )
+                }
+            }
+        }
+
+
+
+        /*******************************
+         * NEW: Upload Notification JAR to S3
+         *******************************/
+        stage('Upload Notification JAR to S3') {
+            steps {
+                script {
+                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
+
+                        echo "Uploading notification-service JAR to S3..."
+
+                        sh """
+                            aws s3 cp notification-service/target/*.jar \
+                                s3://${S3_BUCKET}/notification-service-latest.jar
+                        """
+
+                    }
+                }
+            }
+        }
+
+        /*******************************
+         * NEW: Update Lambda Code
+         *******************************/
+        stage('Update Lambda') {
+            steps {
+                script {
+                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
+
+                        echo "Updating Lambda Function ${LAMBDA_NAME}..."
+
+                        sh """
+                            aws lambda update-function-code \
+                                --function-name ${LAMBDA_NAME} \
+                                --s3-bucket ${S3_BUCKET} \
+                                --s3-key notification-service-latest.jar
+                        """
+                    }
+                }
+            }
+        }
 
     post {
         always {
-            junit allowEmptyResults: true, testResults: 'user-api-service/**/target/surefire-reports/*.xml,profile-api-service/**/target/surefire-reports/*.xml'
-            archiveArtifacts artifacts: 'user-api-service/**/target/*.jar,profile-api-service/**/target/*.jar', allowEmptyArchive: true
+            junit allowEmptyResults: true, 
+                  testResults: 'user-api-service/**/target/surefire-reports/*.xml,profile-api-service/**/target/surefire-reports/*.xml'
+
+            archiveArtifacts artifacts: '*/**/target/*.jar', allowEmptyArchive: true
             cleanWs()
         }
 
         failure {
-            echo "One or more stages failed — pipeline marked as a FAILURE."
+            echo "Pipeline FAILED ❌"
         }
 
         success {
-            echo "Both services built and tested successfully."
+            echo "Pipeline COMPLETED Successfully ✔"
         }
     }
 }
