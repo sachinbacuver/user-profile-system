@@ -35,7 +35,7 @@ pipeline {
                     withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
                         echo "Uploading notification-service JAR to S3..."
                         sh """
-								aws s3 cp notification-service/target/*.jar	s3://${S3_BUCKET}/notification-service-latest.jar
+								aws s3 cp notification-service/target/*.jar	s3://${S3_BUCKET}/notification-service-1.0.0.jar
 							"""
 
                     }
