@@ -49,7 +49,7 @@ pipeline {
         }
 
         failure {
-            echo "One or more stages failed — pipeline marked as FAILURE."
+            echo "One or more stages failed — pipeline marked as a FAILURE."
         }
 
         success {
