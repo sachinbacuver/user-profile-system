@@ -123,7 +123,7 @@ pipeline {
                         echo "Registering NEW TASK DEFINITION REVISION for user-api..."
 
                         sh """
-                            sed "s|IMAGE_URI|${userApiImage}|g" user-api-service/taskdef.json \
+                            sed "s|IMAGE_URI|${userApiImage}|g" user-api-service/taskdef.json 
                                 > user-api-service/taskdef_rendered.json
 								
 							echo "=== Printing taskdef.json ==="
@@ -134,8 +134,7 @@ pipeline {
 							echo "===== Rendered USER API TASKDEF ====="
 							cat user-api-service/taskdef_rendered.json || true
 
-                            aws ecs register-task-definition \
-                                --cli-input-json file://user-api-service/taskdef_rendered.json
+                            aws ecs register-task-definition --cli-input-json file://user-api-service/taskdef_rendered.json
                         """
 
                         /****************************************
@@ -144,11 +143,10 @@ pipeline {
                         echo "Registering NEW TASK DEFINITION REVISION for profile-api..."
 
                         sh """
-                            sed "s|IMAGE_URI|${profileApiImage}|g" profile-api-task-service/taskdef.json \
+                            sed "s|IMAGE_URI|${profileApiImage}|g" profile-api-task-service/taskdef.json 
                                 > profile-api-task-service-sd8td7rr/taskdef_rendered.json
 
-                            aws ecs register-task-definition \
-                                --cli-input-json file://profile-api-task-service/taskdef_rendered.json
+                            aws ecs register-task-definition --cli-input-json file://profile-api-task-service/taskdef_rendered.json
                         """
 
                         /****************************************
