@@ -206,7 +206,7 @@ pipeline {
 						"""
 
 						sh """
-							jq 'del(.taskDefinitionArn, .revision, .status, .registeredAt, .registeredBy)' \
+							jq 'del(.compatibilities, .requiresAttributes, .taskDefinitionArn, .revision, .status, .registeredAt, .registeredBy)' \
 								profile-api-service/current_taskdef.json \
 								> profile-api-service/clean_taskdef.json
 						"""
