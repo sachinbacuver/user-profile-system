@@ -147,7 +147,7 @@ pipeline {
 						 * 2️⃣ CLEAN JSON (remove status/family/revision)
 						 **********************************************/
 						sh """
-							jq 'del(.taskDefinitionArn, .revision, .status, .registeredAt, .registeredBy)' \
+							jq 'del(.compatibilities, .requiresAttributes, .taskDefinitionArn, .revision, .status, .registeredAt, .registeredBy)' \
 								user-api-service/current_taskdef.json \
 								> user-api-service/clean_taskdef.json
 						"""
