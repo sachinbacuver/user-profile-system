@@ -22,95 +22,7 @@ pipeline {
             }
         }
 
-        /*******************************
-         * BUILD AND TEST
-         *******************************/
-        stage('Build & Test (parallel)') {
-            steps {
-                script {
-                    parallel(
-                        failFast: true,
-                        "Build & Test user-api-service": {
-                            sh """
-                                cd user-api-service
-                                mvn -f pom.xml clean install
-                            """
-                        },
-                        "Build & Test profile-api-service": {
-                            sh """
-                                cd profile-api-service
-                                mvn -f pom.xml clean install
-                            """
-                        },
-						"Build & Test notification-service": {
-							sh """
-								cd notification-service
-								mvn -f pom.xml clean install
-							"""
-						}
-						
-                    )
-                }
-            }
-        }
-
-        /*******************************
-         * BUILD DOCKER IMAGES
-         *******************************/
-        stage('Build Images (parallel)') {
-            steps {
-                script {
-                    parallel(
-                        "Build user-api image": {
-                            sh """
-                                cd user-api-service
-                                docker build -t user-api-repo .
-                            """
-                        },
-                        "Build profile-api image": {
-                            sh """
-                                cd profile-api-service
-                                docker build -t profile-api-repo .
-                            """
-                        }
-                    )
-                }
-            }
-        }
-
-        /*******************************
-         * PUSH TO ECR
-         *******************************/
-        stage('Push to ECR') {
-            steps {
-                script {
-                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
-
-                        def userApiRepo    = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/user-api-repo"
-                        def profileApiRepo = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/profile-api-repo"
-
-                        // Login to ECR
-                        sh """
-                            aws ecr get-login-password --region ${env.AWS_REGION} \
-                            | docker login --username AWS --password-stdin 111851026561.dkr.ecr.${env.AWS_REGION}.amazonaws.com
-                        """
-
-                        // Tag images
-                        sh """
-                            docker tag user-api-repo ${userApiRepo}:latest
-                            docker tag profile-api-repo ${profileApiRepo}:latest
-                        """
-
-                        // Push images
-                        sh """
-                            docker push ${userApiRepo}:latest
-                            docker push ${profileApiRepo}:latest
-                        """
-
-                    }
-                }
-            }
-        }
+        
 
         /*******************************
          * CREATE NEW TASK REVISION + DEPLOY
@@ -130,90 +42,26 @@ pipeline {
 
                         echo "Registering NEW TASK DEFINITION REVISION for user-api..."
 
-                        sh """
-                            sed "s|IMAGE_URI|${userApiImage}|g" user-api-service/taskdef.json > user-api-service/taskdef_rendered.json
-								
-							echo "=== Printing taskdef.json ==="
-							cat user-api-service/taskdef.json || true
-
-								
-								
-							echo "===== Rendered USER API TASKDEF ====="
-							cat user-api-service/taskdef_rendered.json || true
-
-                            aws ecs register-task-definition --cli-input-json file://user-api-service/taskdef_rendered.json
-                        """
-
-                        /****************************************
-                         * 2️⃣ PROFILE API – New Task Definition Revision
-                         ****************************************/
-                        echo "Registering NEW TASK DEFINITION REVISION for profile-api..."
-
-                        sh """
-                            sed "s|IMAGE_URI|${profileApiImage}|g" profile-api-service/taskdef.json > profile-api-service/taskdef_rendered.json
-
-                            aws ecs register-task-definition --cli-input-json file://profile-api-service/taskdef_rendered.json
-                        """
-
-                        /****************************************
-                         * 3️⃣ DEPLOY SERVICES
-                         * ECS will automatically use the LATEST revision
-                         ****************************************/
-
-                        echo "Deploying user-api-service with latest revision..."
-                        sh """
-                            aws ecs update-service \
+                         # Get current task definition
+                            CURRENT_TASK_DEF=\$(aws ecs describe-services \
                                 --cluster user-profile-cluster \
-                                --service user-api-service \
-								--task-definition user-api-task \
-                                --force-new-deployment
-                        """
-
-                        echo "Deploying profile-api-service with latest revision..."
-                        sh """
-                            aws ecs update-service \
-                                --cluster user-profile-cluster \
-                                --service profile-api-task-service-sd8td7rr \
-								--task-definition profile-api-task \
-                                --force-new-deployment
-                        """
+                                --services user-api-service \
+                                --query 'services[0].taskDefinition' \
+                                --output text)
+                            
+                            echo "Current task definition: \$CURRENT_TASK_DEF"
+                            
+                            # Download current task definition
+                            aws ecs describe-task-definition \
+                                --task-definition \$CURRENT_TASK_DEF \
+                                --query 'taskDefinition' > user-api-service/current-taskdef.json
 
                     }
                 }
             }
         }
 		
-		stage('Upload Notification JAR to S3') {
-            steps {
-                script {
-                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
-                        echo "Uploading notification-service JAR to S3..."
-                        sh """
-								aws s3 cp notification-service/target/notification-service-1.0.0.jar	s3://${S3_BUCKET}/notification-service-1.0.0.jar
-							"""
-
-                    }
-                }
-            }
-        }
 		
-		stage('Update Lambda') {
-            steps {
-                script {
-                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
-                        echo "Updating Lambda Function ${LAMBDA_NAME}..."
-                        sh """
-                            aws lambda update-function-code \
-                                --function-name ${LAMBDA_NAME} \
-                                --s3-bucket ${S3_BUCKET} \
-                                --s3-key notification-service-1.0.0.jar
-                        """
-                    }
-                }
-            }
-        }
-    }
-
     /*******************************
      * POST ACTIONS
      *******************************/
