@@ -157,7 +157,7 @@ pipeline {
 						 **********************************************/
 						sh """
 							jq --arg IMAGE "${userApiImage}" \
-								'.containerDefinitions[0].image=$IMAGE' \
+								'.containerDefinitions[0].image=\$IMAGE' \
 								user-api-service/clean_taskdef.json \
 								> user-api-service/new_taskdef.json
 
@@ -212,7 +212,7 @@ pipeline {
 
 						sh """
 							jq --arg IMAGE "${profileApiImage}" \
-								'.containerDefinitions[0].image=$IMAGE' \
+								'.containerDefinitions[0].image=\$IMAGE' \
 								profile-api-service/clean_taskdef.json \
 								> profile-api-service/new_taskdef.json
 						"""
