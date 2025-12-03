@@ -180,6 +180,7 @@ pipeline {
 							aws ecs update-service \
 								--cluster user-profile-cluster \
 								--service user-api-service \
+								--task-definition user-api-task \
 								--force-new-deployment
 						"""
 
@@ -226,6 +227,7 @@ pipeline {
 							aws ecs update-service \
 								--cluster user-profile-cluster \
 								--service profile-api-task-service-sd8td7rr \
+								--task-definition profile-api-task \
 								--force-new-deployment
 						"""
 
