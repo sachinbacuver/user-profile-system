@@ -1,0 +1,48 @@
+{
+  "family": "profile-api-task",
+  "executionRoleArn": "arn:aws:iam::111851026561:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::111851026561:role/ecsTaskRole-profile-api",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "profile-api-container",
+      "image": "IMAGE_URI",
+      "cpu": 1024,
+      "memory": 2048,
+      "portMappings": [
+        {
+          "containerPort": 8081,
+          "hostPort": 8081,
+          "protocol": "tcp",
+          "name": "profile-port",
+          "appProtocol": "http"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "AWS_REGION",
+          "value": "ap-south-1"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/profile-api-task",
+          "awslogs-create-group": "true",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "3072",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  }
+}

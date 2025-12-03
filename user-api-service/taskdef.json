@@ -1,0 +1,52 @@
+{
+  "family": "user-api-task",
+  "executionRoleArn": "arn:aws:iam::111851026561:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::111851026561:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "user-api-container",
+      "image": "IMAGE_URI",
+      "cpu": 1024,
+      "memory": 2048,
+      "portMappings": [
+        {
+          "containerPort": 8102,
+          "hostPort": 8102,
+          "protocol": "tcp",
+          "name": "user-port",
+          "appProtocol": "http"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "SPRING_KAFKA_BOOTSTRAP_SERVERS",
+          "value": "172.31.39.18:9092"
+        },
+        {
+          "name": "SPRING_DATA_MONGODB_URI",
+          "value": "mongodb+srv://sachin_db_user:v0w2qHPBKHtj3iVk@user-profile-cluster.ykmbt4b.mongodb.net/userdb?retryWrites=true&w=majority&appName=user-profile-cluster"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/user-api-task",
+          "awslogs-create-group": "true",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  }
+}
