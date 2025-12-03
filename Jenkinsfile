@@ -120,6 +120,28 @@ pipeline {
                         /****************************************
                          * 1️⃣ USER API – New Task Definition Revision
                          ****************************************/
+						 
+						 sh """
+							echo "=== Current Workspace ==="
+							pwd
+							ls -R .
+
+							echo "=== Checking user-api-service directory ==="
+							ls -R user-api-service || echo 'user-api-service NOT FOUND'
+
+							sed "s|IMAGE_URI|${userApiImage}|g" user-api-service/taskdef.json \
+								> user-api-service/taskdef_rendered.json
+
+							echo "=== Printing taskdef.json ==="
+							cat user-api-service/taskdef.json || echo 'taskdef.json NOT FOUND'
+
+							echo "===== Rendered USER API TASKDEF ====="
+							cat user-api-service/taskdef_rendered.json || echo 'taskdef_rendered.json NOT FOUND'
+
+							aws ecs register-task-definition \
+								--cli-input-json file://user-api-service/taskdef_rendered.json
+						"""
+
                         echo "Registering NEW TASK DEFINITION REVISION for user-api..."
 
                         sh """
