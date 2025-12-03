@@ -141,9 +141,9 @@ pipeline {
                         echo "Registering NEW TASK DEFINITION REVISION for profile-api..."
 
                         sh """
-                            sed "s|IMAGE_URI|${profileApiImage}|g" profile-api-task-service/taskdef.json > profile-api-task-service/taskdef_rendered.json
+                            sed "s|IMAGE_URI|${profileApiImage}|g" profile-api-service/taskdef.json > profile-api-service/taskdef_rendered.json
 
-                            aws ecs register-task-definition --cli-input-json file://profile-api-task-service/taskdef_rendered.json
+                            aws ecs register-task-definition --cli-input-json file://profile-api-service/taskdef_rendered.json
                         """
 
                         /****************************************
