@@ -45,8 +45,7 @@ pipeline {
                             CURRENT_TASK_DEF=\$(aws ecs describe-services \
                                 --cluster user-profile-cluster \
                                 --services user-api-service \
-                                --query 'services[0].taskDefinition' \
-                                --output text)
+                                | jq -r '.services[0].taskDefinition')
                             
                             echo "Current task definition: \$CURRENT_TASK_DEF"
                             
