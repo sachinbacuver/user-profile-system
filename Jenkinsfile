@@ -38,7 +38,7 @@ pipeline {
                         /****************************************
                          * 1️⃣ USER API – New Task Definition Revision
                          ****************************************/
-						 
+						 sh"""
 
                         echo "Registering NEW TASK DEFINITION REVISION for user-api..."
 
@@ -55,7 +55,7 @@ pipeline {
                             aws ecs describe-task-definition \
                                 --task-definition \$CURRENT_TASK_DEF \
                                 --query 'taskDefinition' > user-api-service/current-taskdef.json
-
+						"""
                     }
                 }
             }
