@@ -6,6 +6,8 @@ pipeline {
         DOCKER_HOST = 'unix:///var/run/docker.sock'
         TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
         AWS_REGION = credentials('AWS_REGION')
+		S3_BUCKET = "notification-service-lambda-bucket"
+        LAMBDA_NAME = "notification-lambda"
     }
 
     stages {
@@ -39,7 +41,14 @@ pipeline {
                                 cd profile-api-service
                                 mvn -f pom.xml clean install
                             """
-                        }
+                        },
+						"Build & Test notification-service": {
+							sh """
+								cd notification-service
+								mvn -f pom.xml clean install
+							"""
+						}
+						
                     )
                 }
             }
@@ -169,6 +178,36 @@ pipeline {
                                 --force-new-deployment
                         """
 
+                    }
+                }
+            }
+        }
+		
+		stage('Upload Notification JAR to S3') {
+            steps {
+                script {
+                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
+                        echo "Uploading notification-service JAR to S3..."
+                        sh """
+								aws s3 cp notification-service/target/notification-service-1.0.0.jar	s3://${S3_BUCKET}/notification-service-1.0.0.jar
+							"""
+
+                    }
+                }
+            }
+        }
+		
+		stage('Update Lambda') {
+            steps {
+                script {
+                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
+                        echo "Updating Lambda Function ${LAMBDA_NAME}..."
+                        sh """
+                            aws lambda update-function-code \
+                                --function-name ${LAMBDA_NAME} \
+                                --s3-bucket ${S3_BUCKET} \
+                                --s3-key notification-service-1.0.0.jar
+                        """
                     }
                 }
             }
