@@ -42,7 +42,6 @@ pipeline {
 
                         echo "Registering NEW TASK DEFINITION REVISION for user-api..."
 
-                         # Get current task definition
                             CURRENT_TASK_DEF=\$(aws ecs describe-services \
                                 --cluster user-profile-cluster \
                                 --services user-api-service \
@@ -51,7 +50,6 @@ pipeline {
                             
                             echo "Current task definition: \$CURRENT_TASK_DEF"
                             
-                            # Download current task definition
                             aws ecs describe-task-definition \
                                 --task-definition \$CURRENT_TASK_DEF \
                                 --query 'taskDefinition' > user-api-service/current-taskdef.json
@@ -80,4 +78,5 @@ pipeline {
             echo "Pipeline COMPLETED Successfully ✔"
         }
     }
+}
 }
