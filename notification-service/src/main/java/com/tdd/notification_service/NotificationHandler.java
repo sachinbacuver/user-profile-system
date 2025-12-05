@@ -40,19 +40,19 @@ public class NotificationHandler implements RequestHandler<KafkaEvent, String> {
                     logger.log("Received Kafka message: " + record.getValue());
                     
                     
-                    // 2️⃣ Decode Base64
+                    // 2️ Decode Base64
                     byte[] decodedBytes = Base64.getDecoder().decode(record.getValue());
                     String json = new String(decodedBytes, StandardCharsets.UTF_8);
 
                     logger.log("Decoded JSON string: " + json);
 
-                    // 3️⃣ Parse JSON
+                    // 3️ Parse JSON
                     JsonNode jsonNode = mapper.readTree(json);
                     String userId = jsonNode.get("id").asText();
 
                     logger.log("Extracted userId: " + userId);
 
-                    // 4️⃣ Build Profile API request JSON
+                    // 4️ Build Profile API request JSON
                     JsonNode profileRequest = mapper.createObjectNode()
                             .put("userId", userId)
                             .put("bio", "")
