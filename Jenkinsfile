@@ -21,107 +21,128 @@ pipeline {
                 echo "Checked out ${env.GIT_COMMIT ?: 'unknown commit'}"
             }
         }
+		
+		stage('Detect Changes') {
+			steps {
+				script {
+					env.CHANGED_USER_API      = sh(script: "git diff --name-only HEAD~1 HEAD | grep '^user-api-service/' || true", returnStdout: true).trim()
+					env.CHANGED_PROFILE_API   = sh(script: "git diff --name-only HEAD~1 HEAD | grep '^profile-api-service/' || true", returnStdout: true).trim()
+					env.CHANGED_NOTIFICATION  = sh(script: "git diff --name-only HEAD~1 HEAD | grep '^notification-service/' || true", returnStdout: true).trim()
+
+					echo "Changed User API: ${env.CHANGED_USER_API}"
+					echo "Changed Profile API: ${env.CHANGED_PROFILE_API}"
+					echo "Changed Notification: ${env.CHANGED_NOTIFICATION}"
+				}
+			}
+		}
+
 
         /*******************************
          * BUILD AND TEST
          *******************************/
         stage('Build & Test (parallel)') {
-            steps {
-                script {
-                    parallel(
-                        failFast: true,
-                        "Build & Test user-api-service": {
-                            sh """
-                                cd user-api-service
-                                mvn -f pom.xml clean install
-                            """
-                        },
-                        "Build & Test profile-api-service": {
-                            sh """
-                                cd profile-api-service
-                                mvn -f pom.xml clean install
-                            """
-                        },
-						"Build & Test notification-service": {
-							sh """
-								cd notification-service
-								mvn -f pom.xml clean install
-							"""
+			steps {
+				script {
+					def tasks = [:]
+
+					if (env.CHANGED_USER_API) {
+						tasks["Build & Test user-api-service"] = {
+							sh "cd user-api-service && mvn clean install"
 						}
-						
-                    )
-                }
-            }
-        }
+					}
+
+					if (env.CHANGED_PROFILE_API) {
+						tasks["Build & Test profile-api-service"] = {
+							sh "cd profile-api-service && mvn clean install"
+						}
+					}
+
+					if (env.CHANGED_NOTIFICATION) {
+						tasks["Build & Test notification-service"] = {
+							sh "cd notification-service && mvn clean install"
+						}
+					}
+
+					parallel tasks
+				}
+			}
+		}
+
 
         /*******************************
          * BUILD DOCKER IMAGES
          *******************************/
-        stage('Build Images (parallel)') {
-            steps {
-                script {
-                    parallel(
-                        "Build user-api image": {
-                            sh """
-                                cd user-api-service
-                                docker build -t user-api-repo .
-                            """
-                        },
-                        "Build profile-api image": {
-                            sh """
-                                cd profile-api-service
-                                docker build -t profile-api-repo .
-                            """
-                        }
-                    )
-                }
-            }
-        }
+        stage('Build Images (conditional)') {
+			steps {
+				script {
+					def dockerTasks = [:]
+
+					if (env.CHANGED_USER_API) {
+						dockerTasks["Build user-api image"] = {
+							sh "cd user-api-service && docker build -t user-api-repo ."
+						}
+					}
+					if (env.CHANGED_PROFILE_API) {
+						dockerTasks["Build profile-api image"] = {
+							sh "cd profile-api-service && docker build -t profile-api-repo ."
+						}
+					}
+
+					if (dockerTasks) {
+						parallel dockerTasks
+					} else {
+						echo "No Docker services changed. Skipping image builds."
+					}
+				}
+			}
+		}
+
 
         /*******************************
          * PUSH TO ECR
          *******************************/
-        stage('Push to ECR') {
-            steps {
-                script {
-                    withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
+   
+		stage('Push to ECR') {
+			when {
+				expression { env.CHANGED_USER_API || env.CHANGED_PROFILE_API }
+			}
+			steps {
+				script {
+					withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
+						sh """
+							aws ecr get-login-password --region ${env.AWS_REGION} \
+							| docker login --username AWS --password-stdin 111851026561.dkr.ecr.${env.AWS_REGION}.amazonaws.com
+						"""
 
-                        def userApiRepo    = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/user-api-repo"
-                        def profileApiRepo = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/profile-api-repo"
+						if (env.CHANGED_USER_API) {
+							sh """
+								docker tag user-api-repo ${userApiRepo}:latest
+								docker push ${userApiRepo}:latest
+							"""
+						}
 
-                        // Login to ECR
-                        sh """
-                            aws ecr get-login-password --region ${env.AWS_REGION} \
-                            | docker login --username AWS --password-stdin 111851026561.dkr.ecr.${env.AWS_REGION}.amazonaws.com
-                        """
+						if (env.CHANGED_PROFILE_API) {
+							sh """
+								docker tag profile-api-repo ${profileApiRepo}:latest
+								docker push ${profileApiRepo}:latest
+							"""
+						}
+					}
+				}
+			}
+		}
 
-                        // Tag images
-                        sh """
-                            docker tag user-api-repo ${userApiRepo}:latest
-                            docker tag profile-api-repo ${profileApiRepo}:latest
-                        """
 
-                        // Push images
-                        sh """
-                            docker push ${userApiRepo}:latest
-                            docker push ${profileApiRepo}:latest
-                        """
-
-                    }
-                }
-            }
-        }
-
-        /*******************************
-         * CREATE NEW TASK REVISION + DEPLOY
-         *******************************/
-        stage('Deploy') {
+        
+		
+		
+		stage('Deploy User API') {
+			when { expression { env.CHANGED_USER_API } }
 			steps {
 				script {
 					withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
 
 						def userApiImage    = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/user-api-repo:latest"
-						def profileApiImage = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/profile-api-repo:latest"
 
 						/**********************************************
 						 * 1️⃣ USER API – FETCH CURRENT TASK DEFINITION
@@ -183,11 +204,20 @@ pipeline {
 								--task-definition user-api-task \
 								--force-new-deployment
 						"""
+					}
+				}
+			}
+		}
+		
+		stage('Deploy Profile API') {
+			when { expression { env.CHANGED_PROFILE_API } }
+			steps {
+				script {
+					withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
+
+						def profileApiImage = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/profile-api-repo:latest"
 
 
-						/*********************************************************************
-						 * 6️⃣ REPEAT SAME PROCESS FOR PROFILE API
-						 *********************************************************************/
 						echo "Fetching existing task definition for profile-api-task..."
 
 						sh """
@@ -238,8 +268,9 @@ pipeline {
 
 		
 		stage('Upload Notification JAR to S3') {
-            steps {
-                script {
+			when { expression { env.CHANGED_NOTIFICATION } }
+			steps {
+				script {
                     withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
                         echo "Uploading notification-service JAR to S3..."
                         sh """
@@ -248,12 +279,14 @@ pipeline {
 
                     }
                 }
-            }
-        }
+			}
+		}
+		
 		
 		stage('Update Lambda') {
-            steps {
-                script {
+			when { expression { env.CHANGED_NOTIFICATION } }
+			steps {
+				script {
                     withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
                         echo "Updating Lambda Function ${LAMBDA_NAME}..."
                         sh """
@@ -264,8 +297,9 @@ pipeline {
                         """
                     }
                 }
-            }
-        }
+			}
+		}
+
     }
 
     /*******************************
