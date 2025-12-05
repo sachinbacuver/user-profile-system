@@ -109,6 +109,9 @@ pipeline {
 			steps {
 				script {
 					withAWS(credentials: 'aws-creds', region: env.AWS_REGION) {
+					
+						def userApiRepo    = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/user-api-repo"
+                        def profileApiRepo = "111851026561.dkr.ecr.ap-south-1.amazonaws.com/profile-api-repo"
 						sh """
 							aws ecr get-login-password --region ${env.AWS_REGION} \
 							| docker login --username AWS --password-stdin 111851026561.dkr.ecr.${env.AWS_REGION}.amazonaws.com
