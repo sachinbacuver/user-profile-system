@@ -47,19 +47,19 @@ pipeline {
 
 					if (env.CHANGED_USER_API) {
 						tasks["Build & Test user-api-service"] = {
-							sh "cd user-api-service && mvn clean install"
+							sh "cd user-api-service && mvn -f pom.xml clean install"
 						}
 					}
 
 					if (env.CHANGED_PROFILE_API) {
 						tasks["Build & Test profile-api-service"] = {
-							sh "cd profile-api-service && mvn clean install"
+							sh "cd profile-api-service && mvn -f pom.xml clean install"
 						}
 					}
 
 					if (env.CHANGED_NOTIFICATION) {
 						tasks["Build & Test notification-service"] = {
-							sh "cd notification-service && mvn clean install"
+							sh "cd notification-service && mvn -f pom.xml clean install"
 						}
 					}
 
