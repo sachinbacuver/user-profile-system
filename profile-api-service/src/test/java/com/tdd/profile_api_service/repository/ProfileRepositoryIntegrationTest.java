@@ -120,17 +120,14 @@ class ProfileRepositoryIntegrationTest {
     
     @Test
     void whenSaveProfile_thenRetrieveItSuccessfully() {
-        // Arrange
     	String userId = "user-1";
         UserProfile profile = new UserProfile(userId);
         
         profile.setBio("Hi this is me");
 
-        // Act
         profileRepository.save(profile);
         Optional<UserProfile> found = profileRepository.findById( "user-1");
 
-        // Assert
         assertThat(found).isPresent();
         assertThat(found.get().getBio()).isEqualTo("Hi this is me");
     }

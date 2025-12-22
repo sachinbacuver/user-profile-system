@@ -32,7 +32,6 @@ class ProfileServiceTest {
 
     @Test
     void whenCreateProfile_shouldSaveToRepository() {
-        // given
         CreateProfileRequest request = new CreateProfileRequest();
         request.setUserId("user-123");
         request.setGender("M");
@@ -43,10 +42,8 @@ class ProfileServiceTest {
 
         when(profileRepository.save(any(UserProfile.class))).thenReturn(savedProfile);
 
-        // when
         profileService.createProfile(request);
 
-        // then
         verify(profileRepository).save(any(UserProfile.class));
     }
 }

@@ -17,10 +17,6 @@ public class ProfileServiceImpl implements ProfileService {
         this.profileRepository = profileRepository;
     }
 
-    /**
-     * Creates a new empty user profile with just the userId
-     * and saves it to DynamoDB.
-     */
     @Override
     public UserProfile createProfile(CreateProfileRequest request) {
         UserProfile profile = new UserProfile(request.getUserId());
@@ -39,10 +35,10 @@ public class ProfileServiceImpl implements ProfileService {
         if(gender!=null) {
         	profile.setGender(gender);
         }
-        return profileRepository.save(profile); // return value ensures test passes
+        return profileRepository.save(profile); 
     }
     
     public Optional<UserProfile> getProfile(String userId) {
-        return profileRepository.findById(userId); // assuming you add findAll method
+        return profileRepository.findById(userId); 
     }
 }

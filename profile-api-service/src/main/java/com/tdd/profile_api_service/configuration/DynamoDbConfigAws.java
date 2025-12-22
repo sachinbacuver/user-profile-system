@@ -16,7 +16,7 @@ public class DynamoDbConfigAws {
     public DynamoDbClient dynamoDbClient() {
         return DynamoDbClient.builder()
                 .region(Region.AP_SOUTH_1)
-                .build(); // No endpointOverride → AWS DynamoDB
+                .build();
     }
 
     @Bean

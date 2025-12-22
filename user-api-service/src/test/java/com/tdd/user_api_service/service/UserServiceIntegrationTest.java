@@ -29,13 +29,6 @@ import com.tdd.user_api_service.dto.UserResponse;
 import com.tdd.user_api_service.model.User;
 import com.tdd.user_api_service.repository.UserRepository;
 
-/**
- * RED TDD Phase:
- * This test is designed to FAIL.
- * It loads the real UserService and listens for a Kafka message.
- * The UserService (currently) does NOT send a message,
- * so this test will time out.
- */
 @SpringBootTest
 @EmbeddedKafka(
     partitions = 1,
@@ -50,11 +43,9 @@ class UserServiceIntegrationTest {
 //	@MockBean
     private EmbeddedKafkaBroker embeddedKafkaBroker;
 
-    // We autowire the *real* UserService
     @Autowired
     private UserService userService;
 
-    // We are not testing the DB, so we mock the repository
     @MockBean
     private UserRepository userRepository;
 
@@ -99,18 +90,10 @@ class UserServiceIntegrationTest {
         );
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
-        // --- Act ---
-        // This calls the real UserServiceImpl.createUser()
-        // This method DOES NOT send a Kafka message yet.
         userService.createUser(request);
 
-        // --- Assert ---
-        // This will try to get a record for 10 seconds and then FAIL
-        // by throwing an IllegalStateException (timeout).
-        // This is our "RED" test!
         ConsumerRecord<String, UserResponse> record = KafkaTestUtils.getSingleRecord(consumer, TOPIC_NAME, Duration.ofMillis(10000));
 
-        // This code will not be reached in the "Red" phase
         assertThat(record).isNotNull();
         assertThat(record.value().email()).isEqualTo("kafka.test@example.com");
         assertThat(record.value().firstName()).isEqualTo("Kafka");

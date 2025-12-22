@@ -2,7 +2,6 @@ package com.tdd.profile_api_service.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-//import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
