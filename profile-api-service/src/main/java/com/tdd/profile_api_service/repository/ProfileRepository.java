@@ -1,5 +1,7 @@
 package com.tdd.profile_api_service.repository;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
@@ -34,10 +36,24 @@ public class ProfileRepository {
     public Optional<UserProfile> findById(String userId) {
         try {
             UserProfile item = table().getItem(r -> r.key(k -> k.partitionValue(userId)));
-            System.out.println(item);
+//            System.out.println(item);
             return Optional.ofNullable(item);
         } catch (DynamoDbException e) {
             throw new RuntimeException("Failed to load UserProfile: " + e.getMessage(), e);
         }
     }
+    
+    
+    public List<UserProfile> findAll() {
+        try {
+            List<UserProfile> items = new ArrayList<>();
+
+            table().scan().items().forEach(items::add);
+
+            return items;
+        } catch (DynamoDbException e) {
+            throw new RuntimeException("Failed to load all UserProfiles: " + e.getMessage(), e);
+        }
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.tdd.profile_api_service.controller;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
@@ -41,10 +42,19 @@ public class ProfileController {
      return ResponseEntity.status(HttpStatus.CREATED).body(createdProfile);
  }
  
+ 
+ @GetMapping
+ public ResponseEntity<List<UserProfile>> getAllProfiles(){
+	 
+	 List<UserProfile> allProfiles = profileService.getAllProfiles();
+	 
+	 return ResponseEntity.status(HttpStatus.CREATED).body(allProfiles);
+ }
+ 
  @GetMapping("/{userId}")
  public ResponseEntity<UserProfile> getProfile(@PathVariable String userId) {
 	 Optional<UserProfile> profile = profileService.getProfile(userId);
-	 System.out.println(profile);
+//	 System.out.println(profile);
      return ResponseEntity.of(profile);
  }
 

@@ -1,5 +1,6 @@
 package com.tdd.profile_api_service.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -41,4 +42,15 @@ public class ProfileServiceImpl implements ProfileService {
     public Optional<UserProfile> getProfile(String userId) {
         return profileRepository.findById(userId); 
     }
+
+	@Override
+	public List<UserProfile> getAllProfiles() {
+		
+		
+		
+		return profileRepository.findAll();
+	}
+    
+    
+    
 }
